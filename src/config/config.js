@@ -2,7 +2,11 @@ import { config } from "dotenv";
 
 config();
 
-const requiredVariables = ["PORT", "NODE_ENV"];
+const requiredVariables = [
+  "PORT",
+  "NODE_ENV",
+  "MONGO_URL"
+];
 
 for (const variable of requiredVariables) {
   if (!process.env[variable]?.trim()) {
@@ -23,6 +27,6 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
 export const env = {
   PORT: port,
   NODE_ENV: process.env.NODE_ENV.trim(),
-  MONGO_URL: process.env.MONGO_URL?.trim() || "",
+  MONGO_URL: process.env.MONGO_URL.trim(),
   JWT_SECRET: process.env.JWT_SECRET || ""
 };

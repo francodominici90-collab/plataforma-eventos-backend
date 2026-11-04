@@ -1,45 +1,45 @@
 # Plataforma de talleres municipales
 
-API REST desarrollada como proyecto del curso Backend II, orientada a la publicación de talleres municipales y la inscripción de participantes.
+API REST orientada a la gestión de talleres municipales e inscripciones, desarrollada como proyecto del curso Backend II.
 
-La temática contempla actividades como talleres de informática, oficios, arte y cocina.
+La temática contempla talleres de oficios, arte, cocina y otras actividades de la comunidad.
 
-## Estado actual
+Esta etapa incorpora el registro de usuarios con persistencia en MongoDB Atlas, validación de datos y protección de contraseñas mediante bcrypt.
 
-Esta primera preentrega prepara la estructura del proyecto.
+## Estado del proyecto
 
-Incluye:
+Funcionalidades implementadas:
 
-- Servidor Express con configuración y arranque separados.
-- Módulos ESM mediante `import` y `export`.
-- Configuración de variables de entorno con dotenv.
+- Servidor Express con configuración mediante variables de entorno.
 - Endpoint de estado del servidor.
-- Ruta y controller iniciales para eventos.
-- Ruta y controller iniciales para sesiones.
-- Modelos base de usuarios y eventos con Mongoose.
-- Carpetas preparadas para las siguientes capas del proyecto.
+- Estructura inicial para eventos y sesiones.
+- Modelos base de usuarios y eventos.
+- Registro de usuarios con validaciones.
+- Normalización de emails y control de duplicados.
+- Hash de contraseñas con bcrypt.
+- Asignación obligatoria del rol `user` en el registro público.
+- Respuestas de registro sin el campo `password`.
 
-Todavía no se implementan conexión a MongoDB, persistencia, registro, login, JWT, roles ni inscripciones.
-
-`GET /api/events` devuelve una lista vacía como respuesta inicial; no consulta una base de datos.
+El login, JWT, cookies, autorización y gestión completa de eventos e inscripciones se incorporarán en entregas posteriores.
 
 ## Tecnologías
 
 - Node.js.
 - Express.
-- dotenv.
+- MongoDB Atlas.
 - Mongoose.
+- bcrypt.
+- dotenv.
+- JavaScript con módulos ESM.
 - Git y GitHub.
 
-## Requisitos
+Las pruebas manuales se realizan con Postman y la inspección de documentos desde MongoDB Atlas.
 
-- Node.js 24 o una versión compatible con las dependencias.
-- npm.
-- Git, si se descarga mediante clonación.
-
-Para ejecutar esta etapa no es necesario configurar MongoDB ni generar un secreto JWT.
+MongoDB Atlas aloja la base de datos. MongoDB Compass es un cliente de administración opcional y no es necesario para ejecutar este proyecto.
 
 ## Instalación
+
+Requisito: Node.js 24, versión principal utilizada durante el desarrollo.
 
 Clonar el repositorio:
 
@@ -48,13 +48,21 @@ git clone https://github.com/francodominici90-collab/plataforma-eventos-backend.
 cd plataforma-eventos-backend
 ```
 
-Instalar las dependencias registradas en `package-lock.json`:
+Instalar las dependencias respetando el archivo de bloqueo:
 
 ```bash
 npm ci
 ```
 
-Crear el archivo `.env` a partir de `.env.example`.
+Si npm solicita aprobar el script de instalación de bcrypt, revisar el aviso y autorizar específicamente ese paquete:
+
+```bash
+npm approve-scripts bcrypt
+```
+
+## Variables de entorno
+
+Crear un archivo `.env` en la raíz tomando como referencia `.env.example`.
 
 En PowerShell:
 
@@ -62,85 +70,89 @@ En PowerShell:
 Copy-Item .env.example .env
 ```
 
-En Linux o macOS:
+Configuración de ejemplo:
 
-```bash
-cp .env.example .env
-```
-
-## Variables de entorno
-
-Configuración inicial:
-
-```env
+```dotenv
 PORT=3000
 NODE_ENV=development
-MONGO_URL=
+MONGO_URL=mongodb+srv://USUARIO:CONTRASENA@HOST_DEL_CLUSTER/plataforma_eventos?retryWrites=true&w=majority
 JWT_SECRET=
 ```
 
-| Variable | Función | Uso en esta etapa |
-| --- | --- | --- |
-| `PORT` | Puerto del servidor HTTP. | Obligatoria. |
-| `NODE_ENV` | Nombre del entorno de ejecución. | Obligatoria. |
-| `MONGO_URL` | URI de conexión a MongoDB. | Reservada para una etapa posterior. |
-| `JWT_SECRET` | Secreto para la firma y verificación de tokens JWT. | Reservada para una etapa posterior. |
+Los datos de conexión del ejemplo son marcadores y deben reemplazarse localmente.
 
-La aplicación verifica que `PORT` y `NODE_ENV` estén presentes y no estén vacíos.
+| Variable | Descripción |
+| --- | --- |
+| `PORT` | Puerto HTTP. Debe ser un entero entre 1 y 65535. |
+| `NODE_ENV` | Entorno de ejecución; por ejemplo, `development`. |
+| `MONGO_URL` | URI de conexión a MongoDB Atlas. Obligatoria en esta etapa. |
+| `JWT_SECRET` | Reservada para la futura implementación de autenticación. Actualmente no se utiliza. |
 
-Además, `PORT` debe ser un número entero entre 1 y 65535. Si la configuración es inválida, el inicio falla con un mensaje claro.
+La URI debe indicar explícitamente la base `plataforma_eventos`, después del host y antes de los parámetros de conexión.
 
-`MONGO_URL` y `JWT_SECRET` pueden permanecer vacíos en esta entrega.
+Para conectarse a Atlas se necesita un usuario de base de datos con permisos adecuados y acceso de red habilitado para el equipo que ejecuta la aplicación.
 
-Se eligió MongoDB Atlas para la persistencia futura, utilizando una base llamada `plataforma_eventos`. La aplicación todavía no establece esa conexión.
+Si la contraseña contiene caracteres reservados de una URI, deben codificarse correctamente en la cadena de conexión.
 
-El archivo `.env` contiene configuración local y está excluido de Git. `.env.example` se incluye como plantilla, sin credenciales.
+Nunca publicar credenciales reales ni subir `.env` al repositorio.
 
 ## Ejecución
 
-Iniciar el servidor:
-
-```bash
-npm start
-```
-
-Ejecutar en desarrollo, con reinicio automático ante cambios en los archivos observados:
+Modo desarrollo, con reinicio ante cambios en los archivos:
 
 ```bash
 npm run dev
 ```
 
-Con la configuración inicial, el servidor escucha en:
+Ejecución normal:
+
+```bash
+npm start
+```
+
+Con la configuración del ejemplo, la API estará disponible en:
 
 ```text
 http://localhost:3000
 ```
 
-Para detenerlo, utilizar `Ctrl + C` en la terminal.
+El servidor HTTP comienza a escuchar después de conectar con MongoDB e inicializar el modelo de usuarios y sus índices.
 
-## Organización del proyecto
+Si la conexión o esa inicialización fallan, el proceso termina sin iniciar el servidor HTTP.
 
-| Archivo o carpeta | Responsabilidad |
+## Estructura y responsabilidades
+
+| Ubicación | Responsabilidad |
 | --- | --- |
-| `src/app.js` | Configura Express, `express.json()` y los routers. |
-| `src/server.js` | Inicia el servidor HTTP usando el puerto configurado. |
-| `src/config/config.js` | Carga y valida la configuración de entorno. |
-| `src/routes/` | Define los endpoints y los conecta con sus controllers. |
-| `src/controllers/` | Recibe las peticiones y construye las respuestas HTTP. |
-| `src/services/` | Reservada para las reglas de negocio. |
-| `src/repositories/` | Reservada para la interfaz de acceso a datos. |
-| `src/dao/` | Reservada para las operaciones de persistencia. |
-| `src/models/` | Contiene los modelos base `User.js` y `Event.js`. |
-| `src/middlewares/` | Reservada para middlewares compartidos. |
-| `src/utils/` | Reservada para funciones auxiliares. |
+| `src/app.js` | Configura Express, el procesamiento JSON y los routers. |
+| `src/server.js` | Coordina la conexión y el arranque del servidor HTTP. |
+| `src/config/config.js` | Carga y valida variables de entorno. |
+| `src/config/db.config.js` | Conecta con MongoDB e inicializa el modelo de usuarios. |
+| `src/routes/` | Define endpoints y los conecta con controllers. |
+| `src/controllers/` | Recibe solicitudes y construye respuestas HTTP. |
+| `src/services/` | Contiene las reglas de negocio. |
+| `src/repositories/` | Ofrece una interfaz de acceso a datos para los services. |
+| `src/dao/` | Realiza operaciones mediante los modelos de Mongoose. |
+| `src/models/` | Define los modelos `User` y `Event`. |
+| `src/middlewares/` | Espacio reservado para middlewares específicos. |
+| `src/utils/hash.js` | Centraliza la generación de hashes con bcrypt. |
 
-Las carpetas que aún no contienen implementación incluyen un archivo `.gitkeep` para conservarlas en Git.
+El registro recorre las capas en este orden:
 
-Actualmente, las peticiones recorren el router y el controller. Las capas de services, repositories y DAO se incorporarán al flujo cuando se agreguen reglas de negocio y persistencia.
+**Ruta → Controller → Service → Repository → DAO → Modelo**
 
-`app.js` no inicia el servidor ni contiene la lógica de los controllers.
+La validación del registro y la asignación del rol se resuelven en el service. El DAO utiliza Mongoose para acceder a MongoDB.
+
+Los endpoints iniciales de estado y listado vacío de eventos todavía no necesitan acceder a la persistencia.
 
 ## Rutas disponibles
+
+| Método | Ruta | Función |
+| --- | --- | --- |
+| GET | `/api/health` | Indica que el servidor HTTP está activo. |
+| GET | `/api/events` | Devuelve una lista vacía como estructura inicial del recurso. |
+| GET | `/api/sessions` | Informa el estado inicial del recurso de sesiones. |
+| POST | `/api/sessions/register` | Registra un usuario. |
 
 ### Estado del servidor
 
@@ -148,7 +160,7 @@ Actualmente, las peticiones recorren el router y el controller. Las capas de ser
 GET /api/health
 ```
 
-Respuesta: `200 OK`.
+Respuesta `200 OK`:
 
 ```json
 {
@@ -157,7 +169,7 @@ Respuesta: `200 OK`.
 }
 ```
 
-Permite comprobar que el servidor puede responder una petición HTTP. No verifica la disponibilidad de MongoDB ni de otros servicios externos.
+Este endpoint no realiza una consulta de diagnóstico a MongoDB en cada solicitud.
 
 ### Listado inicial de eventos
 
@@ -165,7 +177,7 @@ Permite comprobar que el servidor puede responder una petición HTTP. No verific
 GET /api/events
 ```
 
-Respuesta: `200 OK`.
+Respuesta `200 OK`:
 
 ```json
 {
@@ -174,103 +186,190 @@ Respuesta: `200 OK`.
 }
 ```
 
-La lista vacía es intencional y corresponde al alcance de esta primera preentrega.
+El listado es provisional: en esta etapa todavía no consulta eventos en MongoDB.
 
-### Estructura inicial de sesiones
+## Registro de usuarios
 
 ```http
-GET /api/sessions
+POST /api/sessions/register
+Content-Type: application/json
 ```
 
-Respuesta: `200 OK`.
+### Campos esperados
+
+| Campo | Reglas |
+| --- | --- |
+| `first_name` | Texto obligatorio y no vacío. Se eliminan espacios exteriores. |
+| `last_name` | Texto obligatorio y no vacío. Se eliminan espacios exteriores. |
+| `email` | Texto obligatorio con validación básica de formato. Se normaliza con `trim` y minúsculas. |
+| `password` | Texto obligatorio, mínimo de 8 caracteres y máximo de 72 bytes en UTF-8. |
+
+La contraseña se conserva tal como fue ingresada antes de generar el hash: no se recorta ni se le aplica `trim`. Se rechazan contraseñas compuestas únicamente por espacios.
+
+El registro público asigna siempre `role: "user"`. Un valor de `role` enviado en el body no se utiliza.
+
+### Ejemplo de solicitud
+
+En Postman, seleccionar **POST**, ingresar la URL y configurar **Body → raw → JSON**:
+
+```text
+http://localhost:3000/api/sessions/register
+```
+
+```json
+{
+  "first_name": "Ana",
+  "last_name": "Pérez",
+  "email": "Ana@Mail.com ",
+  "password": "Secreta123"
+}
+```
+
+La contraseña del ejemplo es únicamente un dato de prueba.
+
+### Registro exitoso
+
+Respuesta `201 Created`:
 
 ```json
 {
   "status": "success",
-  "message": "Recurso de sesiones preparado. Autenticación pendiente."
+  "payload": {
+    "id": "ID_GENERADO_POR_MONGODB",
+    "first_name": "Ana",
+    "last_name": "Pérez",
+    "email": "ana@mail.com",
+    "role": "user"
+  }
 }
 ```
 
-Esta ruta permite comprobar que el router y el controller de sesiones están conectados. No crea sesiones ni autentica usuarios.
+La respuesta no contiene la contraseña original ni su hash.
 
-## Modelos base
+### Datos inválidos
 
-### User
+Respuesta `400 Bad Request`, por ejemplo:
 
-Archivo: `src/models/User.js`.
+```json
+{
+  "status": "error",
+  "message": "Faltan campos obligatorios: last_name, email, password"
+}
+```
 
-| Campo | Tipo | Características |
-| --- | --- | --- |
-| `name` | String | Obligatorio; elimina espacios al inicio y al final. |
-| `email` | String | Obligatorio; elimina espacios externos y convierte a minúsculas. |
-| `password` | String | Obligatorio; excluido de las consultas por defecto mediante `select: false`. |
+También se devuelve `400` ante tipos incorrectos, email inválido o contraseña fuera de los límites establecidos.
 
-El campo `password` está destinado a almacenar un hash cuando se implemente el registro.
+### Email duplicado
 
-El modelo no genera ese hash. `select: false` tampoco cifra la contraseña ni constituye por sí solo un mecanismo de autenticación.
+Respuesta `409 Conflict`:
 
-### Event
+```json
+{
+  "status": "error",
+  "message": "El email ya está registrado"
+}
+```
 
-Archivo: `src/models/Event.js`.
+La búsqueda de duplicados utiliza el email normalizado.
 
-Cada evento representa un taller municipal.
+Además de la consulta previa, un índice único en MongoDB impide guardar emails repetidos. El error de clave duplicada se transforma en una respuesta `409`, contemplando solicitudes simultáneas.
 
-| Campo | Tipo | Características |
-| --- | --- | --- |
-| `title` | String | Título obligatorio. |
-| `description` | String | Descripción obligatoria. |
-| `date` | Date | Fecha y hora obligatorias. |
-| `location` | String | Lugar obligatorio. |
-| `capacity` | Number | Cupo obligatorio; entero seguro mayor o igual que 1. |
+### Fallas inesperadas
 
-Los campos de texto eliminan espacios al inicio y al final.
+Respuesta `500 Internal Server Error`:
 
-Mongoose genera automáticamente el campo `_id` para los documentos.
+```json
+{
+  "status": "error",
+  "message": "No se pudo registrar el usuario"
+}
+```
 
-En esta etapa los modelos están definidos, pero no se utilizan para consultar ni guardar información.
+Los detalles internos del error no se incluyen en la respuesta al cliente.
 
-## Comprobaciones manuales
+## Modelo de usuario
 
-Con el servidor en ejecución, realizar estas peticiones desde Postman:
+El modelo `User` contiene:
 
-| Petición | Resultado esperado |
+- `first_name`.
+- `last_name`.
+- `email`, con índice único.
+- `password`, que almacena el hash.
+- `role`, con valores permitidos `user`, `organizer` y `admin`.
+
+El campo `password` utiliza `select: false` para excluirse de las consultas habituales.
+
+Como esa opción no elimina el hash del resultado de creación, el service construye explícitamente la respuesta pública seleccionando únicamente los campos permitidos.
+
+## Protección de contraseñas
+
+El helper `src/utils/hash.js` utiliza bcrypt de forma asincrónica con un factor de costo de 12.
+
+Bcrypt genera automáticamente un salt para cada hash. La contraseña original no se almacena en MongoDB.
+
+Se valida el límite de 72 bytes antes de calcular el hash, ya que bcrypt ignora el contenido que excede ese límite. Se utiliza:
+
+```js
+Buffer.byteLength(password, "utf8")
+```
+
+La comprobación se realiza en bytes porque ciertos caracteres, como los emojis, ocupan más de un byte.
+
+Esta validación evita aceptar contraseñas cuyo contenido sería truncado silenciosamente por bcrypt.
+
+## Modelo de evento
+
+El modelo base `Event` incluye:
+
+- `title`.
+- `description`.
+- `date`.
+- `location`.
+- `capacity`.
+
+La capacidad debe ser un entero positivo dentro del rango seguro de JavaScript.
+
+El modelo queda preparado para futuras entregas. Actualmente no hay endpoints de creación o administración de eventos.
+
+## Pruebas manuales
+
+Casos comprobados durante el desarrollo:
+
+| Caso | Resultado esperado |
 | --- | --- |
-| `GET http://localhost:3000/api/health` | `200`, con el mensaje de servidor activo. |
-| `GET http://localhost:3000/api/events` | `200`, con `payload: []`. |
-| `GET http://localhost:3000/api/sessions` | `200`, indicando que la autenticación está pendiente. |
+| Registro válido | `201`, con datos públicos del usuario. |
+| Email con mayúsculas y espacios exteriores | Se guarda normalizado. |
+| Body con `role: "admin"` | El usuario se crea con rol `user`. |
+| Email ya registrado | `409`. |
+| Email duplicado con diferente capitalización o espacios | `409`. |
+| Campos obligatorios faltantes | `400`. |
+| Email con formato inválido | `400`. |
+| Contraseña menor a 8 caracteres | `400`. |
+| Contraseña superior a 72 bytes | `400`. |
+| Inspección del documento en Atlas | La contraseña aparece como hash bcrypt. |
+| Inspección de la respuesta del registro | No aparece el campo `password`. |
 
-Para comprobar que ambos modelos se importan correctamente, ejecutar desde la raíz del proyecto:
+Para comprobar la persistencia, abrir la base `plataforma_eventos` en Atlas, seleccionar la colección `users` y buscar el email utilizado en la prueba.
 
-```bash
-node --input-type=module -e "import User from './src/models/User.js'; import Event from './src/models/Event.js'; console.log('Modelos cargados:', User.modelName, Event.modelName);"
-```
+Los registros exitosos permanecen en la base. Para repetir una prueba de creación, utilizar otro email de prueba o eliminar únicamente el documento correspondiente desde Atlas.
 
-Resultado esperado:
+Todavía no existe un endpoint para eliminar usuarios ni una suite de pruebas automatizadas.
 
-```text
-Modelos cargados: User Event
-```
+## Repositorio
 
-Esta comprobación no abre una conexión a MongoDB ni guarda documentos.
+El repositorio incluye el código fuente, `package.json`, `package-lock.json`, `.env.example` y la documentación.
 
-El proyecto todavía no incluye una suite de tests automatizados.
+El archivo `.gitignore` excluye `.env`, `node_modules` y otros archivos locales de trabajo.
 
-## Decisiones de esta etapa
-
-- Se eligió la temática de talleres municipales.
-- Se conservaron los nombres técnicos `User` y `Event` solicitados.
-- Se incorporó validación de configuración para detectar errores al iniciar.
-- Se agregaron restricciones básicas a los campos de los modelos.
-- Se agregó un GET de sesiones para comprobar su estructura inicial.
-- Se prepararon las carpetas de las capas pendientes sin agregar lógica anticipadamente.
+Las carpetas todavía vacías se conservan mediante archivos `.gitkeep`.
 
 ## Base del proyecto
 
-El proyecto parte del material de clase proporcionado por el profesor Pablo Bianchi:
+El proyecto parte del material compartido por el docente:
 
 https://github.com/pablobianchi/coder-95280
 
-Sobre esa base se incorporaron la temática, los recursos iniciales, los modelos, las carpetas requeridas, la validación de configuración y esta documentación.
+Sobre esa base se desarrolla la temática de talleres municipales y las funcionalidades de las entregas de Backend II.
 
 ## Autor
 
