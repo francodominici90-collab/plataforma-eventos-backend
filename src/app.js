@@ -1,12 +1,15 @@
-import express from 'express'
+import express from "express";
 
-import healthRoutes from './routes/health.routes.js'
+import healthRoutes from "./routes/health.routes.js";
+import eventsRouter from "./routes/events.router.js";
+import sessionsRouter from "./routes/sessions.router.js";
 
-const app = express()
+const app = express();
 
-app.use( express.json() )
+app.use(express.json());
 
-app.use('/api/health', healthRoutes)
-
+app.use("/api/health", healthRoutes);
+app.use("/api/events", eventsRouter);
+app.use("/api/sessions", sessionsRouter);
 
 export default app;
