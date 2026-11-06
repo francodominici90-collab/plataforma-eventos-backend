@@ -1,6 +1,6 @@
 import express from "express";
 
-import healthRoutes from "./routes/health.routes.js";
+import healthRoutes from "./routes/health.router.js";
 import eventsRouter from "./routes/events.router.js";
 import sessionsRouter from "./routes/sessions.router.js";
 
