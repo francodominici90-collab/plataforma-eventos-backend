@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "34f7d769-e180-4f0f-a415-ea3ba413adb1",
     "name": "CODER - 95280",
-    "description": "Colección de endpoints del proyecto base de la comisión 95270 (Backend II). Requiere el servidor corriendo en localhost con el PORT definido en .env.",
+    "description": "Colección de endpoints del proyecto base de la comisión 95280 (Backend II). Requiere el servidor corriendo en localhost con el PORT definido en .env.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "11343483"
   },
