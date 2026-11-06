@@ -11,6 +11,7 @@ Esta etapa incorpora el registro de usuarios con persistencia en MongoDB Atlas, 
 Funcionalidades implementadas:
 
 - Servidor Express con configuración mediante variables de entorno.
+- Conexión con MongoDB Atlas antes de iniciar el servidor HTTP.
 - Endpoint de estado del servidor.
 - Estructura inicial para eventos y sesiones.
 - Modelos base de usuarios y eventos.
@@ -32,8 +33,7 @@ El login, JWT, cookies, autorización y gestión completa de eventos e inscripci
 - dotenv.
 - JavaScript con módulos ESM.
 - Git y GitHub.
-
-Las pruebas manuales se realizan con Postman y la inspección de documentos desde MongoDB Atlas.
+- Postman para pruebas manuales.
 
 MongoDB Atlas aloja la base de datos. MongoDB Compass es un cliente de administración opcional y no es necesario para ejecutar este proyecto.
 
@@ -90,7 +90,12 @@ Los datos de conexión del ejemplo son marcadores y deben reemplazarse localment
 
 La URI debe indicar explícitamente la base `plataforma_eventos`, después del host y antes de los parámetros de conexión.
 
-Para conectarse a Atlas se necesita un usuario de base de datos con permisos adecuados y acceso de red habilitado para el equipo que ejecuta la aplicación.
+Para conectarse a Atlas se necesita:
+
+- Un cluster disponible.
+- Un usuario de base de datos con permisos adecuados.
+- Acceso de red habilitado para el equipo que ejecuta la aplicación.
+- La URI correspondiente configurada en `MONGO_URL`.
 
 Si la contraseña contiene caracteres reservados de una URI, deben codificarse correctamente en la cadena de conexión.
 
@@ -116,9 +121,19 @@ Con la configuración del ejemplo, la API estará disponible en:
 http://localhost:3000
 ```
 
-El servidor HTTP comienza a escuchar después de conectar con MongoDB e inicializar el modelo de usuarios y sus índices.
+### Conexión durante el arranque
 
-Si la conexión o esa inicialización fallan, el proceso termina sin iniciar el servidor HTTP.
+`src/server.js` llama a `connectDB()` antes de iniciar el servidor HTTP.
+
+La función de conexión:
+
+1. Conecta Mongoose utilizando `MONGO_URL`.
+2. Espera la inicialización del modelo `User` y sus índices.
+3. Informa en la terminal el nombre de la base de datos utilizada.
+
+El servidor comienza a aceptar solicitudes únicamente después de completar esos pasos.
+
+Si la conexión o la inicialización fallan, el proceso termina sin iniciar el servidor HTTP.
 
 ## Estructura y responsabilidades
 
@@ -128,7 +143,9 @@ Si la conexión o esa inicialización fallan, el proceso termina sin iniciar el 
 | `src/server.js` | Coordina la conexión y el arranque del servidor HTTP. |
 | `src/config/config.js` | Carga y valida variables de entorno. |
 | `src/config/db.config.js` | Conecta con MongoDB e inicializa el modelo de usuarios. |
-| `src/routes/` | Define endpoints y los conecta con controllers. |
+| `src/routes/health.router.js` | Define la ruta de estado del servidor. |
+| `src/routes/events.router.js` | Define las rutas iniciales de eventos. |
+| `src/routes/sessions.router.js` | Define las rutas de sesiones y registro. |
 | `src/controllers/` | Recibe solicitudes y construye respuestas HTTP. |
 | `src/services/` | Contiene las reglas de negocio. |
 | `src/repositories/` | Ofrece una interfaz de acceso a datos para los services. |
@@ -141,9 +158,21 @@ El registro recorre las capas en este orden:
 
 **Ruta → Controller → Service → Repository → DAO → Modelo**
 
+Archivos que intervienen en el registro:
+
+- `src/routes/sessions.router.js`.
+- `src/controllers/sessions.controller.js`.
+- `src/services/sessions.service.js`.
+- `src/repositories/users.repository.js`.
+- `src/dao/users.dao.js`.
+- `src/models/User.js`.
+- `src/utils/hash.js`.
+
 La validación del registro y la asignación del rol se resuelven en el service. El DAO utiliza Mongoose para acceder a MongoDB.
 
 Los endpoints iniciales de estado y listado vacío de eventos todavía no necesitan acceder a la persistencia.
+
+Los archivos de rutas utilizan la convención `*.router.js`.
 
 ## Rutas disponibles
 
@@ -187,6 +216,23 @@ Respuesta `200 OK`:
 ```
 
 El listado es provisional: en esta etapa todavía no consulta eventos en MongoDB.
+
+### Estado del recurso de sesiones
+
+```http
+GET /api/sessions
+```
+
+Respuesta `200 OK`:
+
+```json
+{
+  "status": "success",
+  "message": "Recurso de sesiones disponible. Autenticación pendiente."
+}
+```
+
+Esta ruta es informativa y no identifica a un usuario autenticado.
 
 ## Registro de usuarios
 
@@ -257,7 +303,7 @@ Respuesta `400 Bad Request`, por ejemplo:
 }
 ```
 
-También se devuelve `400` ante tipos incorrectos, email inválido o contraseña fuera de los límites establecidos.
+También se devuelve `400` ante un body que no sea un objeto, tipos incorrectos, email inválido o contraseña fuera de los límites establecidos.
 
 ### Email duplicado
 
@@ -301,6 +347,8 @@ El campo `password` utiliza `select: false` para excluirse de las consultas habi
 
 Como esa opción no elimina el hash del resultado de creación, el service construye explícitamente la respuesta pública seleccionando únicamente los campos permitidos.
 
+El valor predeterminado del rol es `user`. Además, el service lo asigna explícitamente durante el registro público para impedir que el cliente elija un rol privilegiado.
+
 ## Protección de contraseñas
 
 El helper `src/utils/hash.js` utiliza bcrypt de forma asincrónica con un factor de costo de 12.
@@ -331,6 +379,27 @@ La capacidad debe ser un entero positivo dentro del rango seguro de JavaScript.
 
 El modelo queda preparado para futuras entregas. Actualmente no hay endpoints de creación o administración de eventos.
 
+## Colección de Postman
+
+El archivo `CODER - 95280.postman_collection.json` proviene del material base compartido por el docente.
+
+Actualmente incluye una solicitud:
+
+- `GET /api/health`: comprueba que el servidor HTTP esté activo.
+
+### Cómo utilizarla
+
+1. Iniciar el servidor con `npm run dev`.
+2. Abrir Postman y seleccionar **Import**.
+3. Seleccionar el archivo de la colección.
+4. Revisar la variable `base_url`, cuyo valor inicial es `http://localhost:3000`.
+5. Si se utiliza otro puerto, actualizar esa variable.
+6. Ejecutar la solicitud “Verificar estado del servidor”.
+
+La colección base no incluye el registro de usuarios. Sus solicitudes y casos de prueba se documentan en este README y se ejecutaron manualmente en Postman.
+
+Las variables `user_id` y `event_id` pertenecen a la colección original y actualmente no se utilizan.
+
 ## Pruebas manuales
 
 Casos comprobados durante el desarrollo:
@@ -357,7 +426,15 @@ Todavía no existe un endpoint para eliminar usuarios ni una suite de pruebas au
 
 ## Repositorio
 
-El repositorio incluye el código fuente, `package.json`, `package-lock.json`, `.env.example` y la documentación.
+El repositorio incluye:
+
+- Código fuente.
+- `package.json`.
+- `package-lock.json`.
+- `.env.example`.
+- `.gitignore`.
+- Colección base de Postman.
+- README con instalación, configuración y pruebas.
 
 El archivo `.gitignore` excluye `.env`, `node_modules` y otros archivos locales de trabajo.
 
