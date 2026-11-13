@@ -1,5 +1,9 @@
 import * as usersRepository from "../repositories/users.repository.js";
-import { hashPassword } from "../utils/hash.js";
+import {
+  hashPassword,
+  comparePassword
+} from "../utils/hash.js";
+import { generateToken } from "../utils/jwt.js";
 
 export async function registerUser(data) {
   if (!data || typeof data !== "object" || Array.isArray(data)) {
@@ -94,6 +98,57 @@ export async function registerUser(data) {
     email: user.email,
     role: user.role
   };
+}
+
+export async function loginUser(data) {
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    throw createError("Credenciales inválidas", 401);
+  }
+
+  if (
+    typeof data.email !== "string" ||
+    typeof data.password !== "string"
+  ) {
+    throw createError("Credenciales inválidas", 401);
+  }
+
+  const email = data.email.trim().toLowerCase();
+  const password = data.password;
+
+  if (
+    !email ||
+    !password.trim() ||
+    Buffer.byteLength(password, "utf8") > 72
+  ) {
+    throw createError("Credenciales inválidas", 401);
+  }
+
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  if (!emailPattern.test(email)) {
+    throw createError("Credenciales inválidas", 401);
+  }
+
+  const user = await usersRepository.getByEmailWithPassword(email);
+
+  if (!user) {
+    throw createError("Credenciales inválidas", 401);
+  }
+
+  const passwordMatches = await comparePassword(
+    password,
+    user.password
+  );
+
+  if (!passwordMatches) {
+    throw createError("Credenciales inválidas", 401);
+  }
+
+  return generateToken({
+    id: user._id.toString(),
+    email: user.email,
+    role: user.role
+  });
 }
 
 function createError(message, statusCode) {

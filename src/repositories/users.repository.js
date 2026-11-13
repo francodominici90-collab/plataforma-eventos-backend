@@ -4,6 +4,10 @@ export async function getByEmail(email) {
   return usersDao.getByEmail(email);
 }
 
+export async function getByEmailWithPassword(email) {
+  return usersDao.getByEmailWithPassword(email);
+}
+
 export async function create(userData) {
   return usersDao.create(userData);
 }
