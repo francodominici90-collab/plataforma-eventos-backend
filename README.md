@@ -1,64 +1,79 @@
 # Plataforma de talleres municipales
 
-API REST orientada a la gestión de talleres municipales e inscripciones, desarrollada como proyecto del curso Backend II.
+API REST desarrollada como proyecto progresivo del curso Backend II.
 
-La temática contempla talleres de oficios, arte, cocina y otras actividades de la comunidad.
+La temática elegida es una plataforma de talleres y actividades municipales. El objetivo es incorporar, en etapas posteriores, gestión de eventos, inscripciones, cupos y permisos según el rol del usuario.
 
-Esta etapa incorpora el registro de usuarios con persistencia en MongoDB Atlas, validación de datos y protección de contraseñas mediante bcrypt.
-
-## Estado del proyecto
-
-Funcionalidades implementadas:
-
-- Servidor Express con configuración mediante variables de entorno.
-- Conexión con MongoDB Atlas antes de iniciar el servidor HTTP.
-- Endpoint de estado del servidor.
-- Estructura inicial para eventos y sesiones.
-- Modelos base de usuarios y eventos.
-- Registro de usuarios con validaciones.
-- Normalización de emails y control de duplicados.
-- Hash de contraseñas con bcrypt.
-- Asignación obligatoria del rol `user` en el registro público.
-- Respuestas de registro sin el campo `password`.
-
-El login, JWT, cookies, autorización y gestión completa de eventos e inscripciones se incorporarán en entregas posteriores.
+Actualmente incluye registro de usuarios, autenticación mediante JWT almacenado en una cookie HTTP Only, consulta del usuario autenticado y cierre de sesión. También conserva los endpoints iniciales de estado del servidor y eventos.
 
 ## Tecnologías
 
-- Node.js.
+- Node.js con módulos ESM (`import` / `export`).
 - Express.
 - MongoDB Atlas.
 - Mongoose.
-- bcrypt.
 - dotenv.
-- JavaScript con módulos ESM.
-- Git y GitHub.
-- Postman para pruebas manuales.
+- bcrypt.
+- jsonwebtoken.
+- cookie-parser.
+- Supertest.
+- Test runner nativo de Node.js (`node:test`).
+- Assertions de Node.js (`node:assert/strict`).
 
-MongoDB Atlas aloja la base de datos. MongoDB Compass es un cliente de administración opcional y no es necesario para ejecutar este proyecto.
+## Funcionalidades implementadas
+
+- Configuración de Express separada del arranque del servidor.
+- Conexión a MongoDB antes de iniciar el servidor HTTP.
+- Configuración centralizada mediante variables de entorno.
+- Registro de usuarios con validación de datos.
+- Normalización del email.
+- Control de emails duplicados.
+- Hash asíncrono de contraseñas con bcrypt y 12 rondas.
+- Protección del rol durante el registro público.
+- Login con comparación de contraseñas mediante bcrypt.
+- Generación de JWT con expiración configurable.
+- Cookie de autenticación `currentUser`.
+- Ruta protegida para consultar el usuario autenticado.
+- Logout mediante eliminación de la cookie.
+- Pruebas automatizadas de registro y autenticación.
+- Colección de Postman con las rutas disponibles.
+
+La gestión completa de eventos e inscripciones se desarrollará en próximas etapas.
+
+## Requisitos
+
+- Node.js compatible con las dependencias del proyecto. Desarrollo y pruebas realizados con Node.js 24.
+- npm.
+- Acceso a un cluster de MongoDB Atlas.
+- Un usuario de base de datos con permisos sobre las bases utilizadas.
+- La dirección IP desde la que se ejecuta el proyecto habilitada en Atlas.
+
+La persistencia utiliza **MongoDB Atlas**.
+
+MongoDB Compass es un cliente gráfico opcional para consultar la base de datos; no es necesario para ejecutar este proyecto. Los documentos también pueden consultarse desde la interfaz de Atlas.
 
 ## Instalación
 
-Requisito: Node.js 24, versión principal utilizada durante el desarrollo.
-
-Clonar el repositorio:
+Clonar el repositorio e ingresar al proyecto:
 
 ```bash
 git clone https://github.com/francodominici90-collab/plataforma-eventos-backend.git
 cd plataforma-eventos-backend
 ```
 
-Instalar las dependencias respetando el archivo de bloqueo:
+Instalar las dependencias según el archivo de bloqueo:
 
 ```bash
 npm ci
 ```
 
-Si npm solicita aprobar el script de instalación de bcrypt, revisar el aviso y autorizar específicamente ese paquete:
+Si npm informa que el script de instalación de bcrypt requiere aprobación, revisar el aviso y autorizar ese paquete:
 
 ```bash
 npm approve-scripts bcrypt
 ```
+
+Este paso depende de la versión y configuración de npm.
 
 ## Variables de entorno
 
@@ -70,126 +85,176 @@ En PowerShell:
 Copy-Item .env.example .env
 ```
 
-Configuración de ejemplo:
+En Bash:
 
-```dotenv
+```bash
+cp .env.example .env
+```
+
+Ejemplo de configuración:
+
+```env
 PORT=3000
 NODE_ENV=development
 MONGO_URL=mongodb+srv://USUARIO:CONTRASENA@HOST_DEL_CLUSTER/plataforma_eventos?retryWrites=true&w=majority
+MONGO_TEST_URL=mongodb+srv://USUARIO:CONTRASENA@HOST_DEL_CLUSTER/plataforma_eventos_test?retryWrites=true&w=majority
 JWT_SECRET=
+JWT_EXPIRES_IN=1h
 ```
 
-Los datos de conexión del ejemplo son marcadores y deben reemplazarse localmente.
+Las URI son ejemplos. Deben reemplazarse localmente por los datos del cluster y del usuario de base de datos.
 
 | Variable | Descripción |
 | --- | --- |
 | `PORT` | Puerto HTTP. Debe ser un entero entre 1 y 65535. |
-| `NODE_ENV` | Entorno de ejecución; por ejemplo, `development`. |
-| `MONGO_URL` | URI de conexión a MongoDB Atlas. Obligatoria en esta etapa. |
-| `JWT_SECRET` | Reservada para la futura implementación de autenticación. Actualmente no se utiliza. |
+| `NODE_ENV` | Entorno: `development`, `test` o `production`. |
+| `MONGO_URL` | URI de la base utilizada por la aplicación. |
+| `MONGO_TEST_URL` | URI de la base exclusiva para las pruebas automatizadas. |
+| `JWT_SECRET` | Clave privada para firmar y verificar los JWT. |
+| `JWT_EXPIRES_IN` | Duración del JWT, por ejemplo `30s`, `15m`, `1h` o `1d`. |
 
-La URI debe indicar explícitamente la base `plataforma_eventos`, después del host y antes de los parámetros de conexión.
+`MONGO_TEST_URL` es necesaria para ejecutar los tests. No se utiliza para iniciar normalmente la aplicación.
 
-Para conectarse a Atlas se necesita:
+La configuración exige una clave `JWT_SECRET` de al menos 32 bytes. Para generar una clave aleatoria:
 
-- Un cluster disponible.
-- Un usuario de base de datos con permisos adecuados.
-- Acceso de red habilitado para el equipo que ejecuta la aplicación.
-- La URI correspondiente configurada en `MONGO_URL`.
+```bash
+node --input-type=module -e "import { randomBytes } from 'node:crypto'; console.log(randomBytes(32).toString('hex'));"
+```
 
-Si la contraseña contiene caracteres reservados de una URI, deben codificarse correctamente en la cadena de conexión.
+Copiar el resultado únicamente al archivo `.env`.
 
-Nunca publicar credenciales reales ni subir `.env` al repositorio.
+La URI debe incluir explícitamente el nombre de la base:
+
+- Aplicación: `plataforma_eventos`.
+- Pruebas: `plataforma_eventos_test`.
+
+Ambas bases pueden estar en el mismo cluster de Atlas, pero deben ser diferentes.
+
+El archivo `.env` está excluido de Git. No deben subirse credenciales, claves JWT ni tokens al repositorio.
 
 ## Ejecución
 
-Modo desarrollo, con reinicio ante cambios en los archivos:
-
-```bash
-npm run dev
-```
-
-Ejecución normal:
+Iniciar el servidor:
 
 ```bash
 npm start
 ```
 
-Con la configuración del ejemplo, la API estará disponible en:
+Iniciar en modo desarrollo con seguimiento de cambios:
+
+```bash
+npm run dev
+```
+
+Con `PORT=3000`, la dirección base es:
 
 ```text
 http://localhost:3000
 ```
 
-### Conexión durante el arranque
+El arranque conecta Mongoose a MongoDB y espera la inicialización del modelo User antes de abrir el puerto HTTP.
 
-`src/server.js` llama a `connectDB()` antes de iniciar el servidor HTTP.
+Si la conexión falla, el servidor no comienza a escuchar solicitudes.
 
-La función de conexión:
+Después de modificar variables de entorno, detener y volver a iniciar el proceso para asegurar que se cargue la nueva configuración.
 
-1. Conecta Mongoose utilizando `MONGO_URL`.
-2. Espera la inicialización del modelo `User` y sus índices.
-3. Informa en la terminal el nombre de la base de datos utilizada.
+## Arquitectura
 
-El servidor comienza a aceptar solicitudes únicamente después de completar esos pasos.
+El proyecto separa las responsabilidades en capas.
 
-Si la conexión o la inicialización fallan, el proceso termina sin iniciar el servidor HTTP.
-
-## Estructura y responsabilidades
-
-| Ubicación | Responsabilidad |
+| Capa | Responsabilidad |
 | --- | --- |
-| `src/app.js` | Configura Express, el procesamiento JSON y los routers. |
-| `src/server.js` | Coordina la conexión y el arranque del servidor HTTP. |
-| `src/config/config.js` | Carga y valida variables de entorno. |
-| `src/config/db.config.js` | Conecta con MongoDB e inicializa el modelo de usuarios. |
-| `src/routes/health.router.js` | Define la ruta de estado del servidor. |
-| `src/routes/events.router.js` | Define las rutas iniciales de eventos. |
-| `src/routes/sessions.router.js` | Define las rutas de sesiones y registro. |
-| `src/controllers/` | Recibe solicitudes y construye respuestas HTTP. |
-| `src/services/` | Contiene las reglas de negocio. |
-| `src/repositories/` | Ofrece una interfaz de acceso a datos para los services. |
-| `src/dao/` | Realiza operaciones mediante los modelos de Mongoose. |
-| `src/models/` | Define los modelos `User` y `Event`. |
-| `src/middlewares/` | Espacio reservado para middlewares específicos. |
-| `src/utils/hash.js` | Centraliza la generación de hashes con bcrypt. |
+| Routes | Define endpoints y conecta middlewares y controladores. |
+| Controllers | Recibe la petición y construye la respuesta HTTP. |
+| Services | Implementa validaciones y reglas de negocio. |
+| Repositories | Ofrece operaciones de acceso a datos utilizadas por los servicios. |
+| DAO | Ejecuta consultas mediante Mongoose. |
+| Models | Define los esquemas y modelos de MongoDB. |
 
-El registro recorre las capas en este orden:
+El registro y el login recorren estas capas para acceder a los usuarios.
 
-**Ruta → Controller → Service → Repository → DAO → Modelo**
+La ruta `/current` utiliza el middleware de autenticación para verificar el JWT y devolver los datos permitidos. No realiza una consulta adicional a MongoDB.
 
-Archivos que intervienen en el registro:
+### Organización principal
 
-- `src/routes/sessions.router.js`.
-- `src/controllers/sessions.controller.js`.
-- `src/services/sessions.service.js`.
-- `src/repositories/users.repository.js`.
-- `src/dao/users.dao.js`.
-- `src/models/User.js`.
-- `src/utils/hash.js`.
+| Ubicación | Contenido |
+| --- | --- |
+| `src/app.js` | Configuración de Express, middleware JSON, cookies y routers. |
+| `src/server.js` | Conexión a la base e inicio del servidor HTTP. |
+| `src/config/` | Variables de entorno y conexión a MongoDB. |
+| `src/routes/` | Routers de health, events y sessions. |
+| `src/controllers/` | Controladores de cada recurso. |
+| `src/services/` | Lógica de registro y login. |
+| `src/repositories/` | Acceso a usuarios mediante el DAO. |
+| `src/dao/` | Consultas de usuarios con Mongoose. |
+| `src/models/` | Modelos `User.js` y `Event.js`. |
+| `src/middlewares/` | Middleware de autenticación. |
+| `src/utils/` | Helpers reutilizables de bcrypt y JWT. |
+| `tests/` | Pruebas automatizadas de registro y autenticación. |
 
-La validación del registro y la asignación del rol se resuelven en el service. El DAO utiliza Mongoose para acceder a MongoDB.
+Archivos principales del flujo de usuarios:
 
-Los endpoints iniciales de estado y listado vacío de eventos todavía no necesitan acceder a la persistencia.
+- `src/config/config.js`
+- `src/config/db.config.js`
+- `src/routes/sessions.router.js`
+- `src/controllers/sessions.controller.js`
+- `src/services/sessions.service.js`
+- `src/repositories/users.repository.js`
+- `src/dao/users.dao.js`
+- `src/models/User.js`
+- `src/middlewares/auth.middleware.js`
+- `src/utils/hash.js`
+- `src/utils/jwt.js`
 
-Los archivos de rutas utilizan la convención `*.router.js`.
+## Modelos
+
+### User
+
+| Campo | Tipo | Descripción |
+| --- | --- | --- |
+| `first_name` | String | Nombre del usuario. |
+| `last_name` | String | Apellido del usuario. |
+| `email` | String | Email normalizado y único. |
+| `password` | String | Hash de la contraseña. |
+| `role` | String | `user`, `organizer` o `admin`. Por defecto, `user`. |
+
+El registro público asigna siempre el rol `user`, aunque se envíe otro valor en el body.
+
+El campo `password` se excluye de las consultas por defecto. El login lo solicita explícitamente para comparar la contraseña, pero nunca lo devuelve al cliente.
+
+### Event
+
+Modelo base para las próximas etapas, con los campos:
+
+- `title`
+- `description`
+- `date`
+- `location`
+- `capacity`
+
+Todavía no se implementó la gestión de eventos. El endpoint inicial devuelve una lista vacía.
 
 ## Rutas disponibles
 
-| Método | Ruta | Función |
-| --- | --- | --- |
-| GET | `/api/health` | Indica que el servidor HTTP está activo. |
-| GET | `/api/events` | Devuelve una lista vacía como estructura inicial del recurso. |
-| GET | `/api/sessions` | Informa el estado inicial del recurso de sesiones. |
-| POST | `/api/sessions/register` | Registra un usuario. |
+| Método | Ruta | Descripción | Autenticación |
+| --- | --- | --- | --- |
+| GET | `/api/health` | Comprueba que el servidor responde. | No |
+| GET | `/api/events` | Devuelve la lista inicial vacía de eventos. | No |
+| GET | `/api/sessions` | Confirma que el recurso sessions está disponible. | No |
+| POST | `/api/sessions/register` | Registra un usuario. | No |
+| POST | `/api/sessions/login` | Valida credenciales y establece la cookie. | No |
+| GET | `/api/sessions/current` | Devuelve los datos del usuario autenticado. | Sí |
+| POST | `/api/sessions/logout` | Elimina la cookie de autenticación. | No |
 
-### Estado del servidor
+### GET /api/health
+
+Request:
 
 ```http
-GET /api/health
+GET http://localhost:3000/api/health
 ```
 
-Respuesta `200 OK`:
+Response `200`:
 
 ```json
 {
@@ -198,15 +263,17 @@ Respuesta `200 OK`:
 }
 ```
 
-Este endpoint no realiza una consulta de diagnóstico a MongoDB en cada solicitud.
+Este endpoint confirma que el servidor HTTP responde. No ejecuta una comprobación de conexión a MongoDB en cada solicitud.
 
-### Listado inicial de eventos
+### GET /api/events
+
+Request:
 
 ```http
-GET /api/events
+GET http://localhost:3000/api/events
 ```
 
-Respuesta `200 OK`:
+Response `200`:
 
 ```json
 {
@@ -215,51 +282,32 @@ Respuesta `200 OK`:
 }
 ```
 
-El listado es provisional: en esta etapa todavía no consulta eventos en MongoDB.
+### GET /api/sessions
 
-### Estado del recurso de sesiones
+Request:
 
 ```http
-GET /api/sessions
+GET http://localhost:3000/api/sessions
 ```
 
-Respuesta `200 OK`:
+Response `200`:
 
 ```json
 {
   "status": "success",
-  "message": "Recurso de sesiones disponible. Autenticación pendiente."
+  "message": "Recurso de sesiones disponible."
 }
 ```
 
-Esta ruta es informativa y no identifica a un usuario autenticado.
+Este endpoint no consulta la sesión del usuario. Para eso se utiliza `/api/sessions/current`.
 
-## Registro de usuarios
+### POST /api/sessions/register
+
+Request:
 
 ```http
-POST /api/sessions/register
+POST http://localhost:3000/api/sessions/register
 Content-Type: application/json
-```
-
-### Campos esperados
-
-| Campo | Reglas |
-| --- | --- |
-| `first_name` | Texto obligatorio y no vacío. Se eliminan espacios exteriores. |
-| `last_name` | Texto obligatorio y no vacío. Se eliminan espacios exteriores. |
-| `email` | Texto obligatorio con validación básica de formato. Se normaliza con `trim` y minúsculas. |
-| `password` | Texto obligatorio, mínimo de 8 caracteres y máximo de 72 bytes en UTF-8. |
-
-La contraseña se conserva tal como fue ingresada antes de generar el hash: no se recorta ni se le aplica `trim`. Se rechazan contraseñas compuestas únicamente por espacios.
-
-El registro público asigna siempre `role: "user"`. Un valor de `role` enviado en el body no se utiliza.
-
-### Ejemplo de solicitud
-
-En Postman, seleccionar **POST**, ingresar la URL y configurar **Body → raw → JSON**:
-
-```text
-http://localhost:3000/api/sessions/register
 ```
 
 ```json
@@ -271,17 +319,13 @@ http://localhost:3000/api/sessions/register
 }
 ```
 
-La contraseña del ejemplo es únicamente un dato de prueba.
-
-### Registro exitoso
-
-Respuesta `201 Created`:
+Response `201`:
 
 ```json
 {
   "status": "success",
   "payload": {
-    "id": "ID_GENERADO_POR_MONGODB",
+    "id": "507f1f77bcf86cd799439011",
     "first_name": "Ana",
     "last_name": "Pérez",
     "email": "ana@mail.com",
@@ -290,24 +334,37 @@ Respuesta `201 Created`:
 }
 ```
 
-La respuesta no contiene la contraseña original ni su hash.
+El identificador mostrado es ilustrativo. MongoDB genera el identificador real.
 
-### Datos inválidos
+#### Validaciones del registro
 
-Respuesta `400 Bad Request`, por ejemplo:
+- El body debe ser un objeto JSON.
+- `first_name`, `last_name`, `email` y `password` son obligatorios.
+- Los cuatro campos deben ser de tipo texto.
+- Se eliminan espacios al inicio y al final del nombre y apellido.
+- El email se normaliza con `trim()` y `toLowerCase()`.
+- Se valida el formato del email antes de consultar la base.
+- La contraseña debe tener al menos 8 caracteres.
+- La contraseña no puede superar los 72 bytes en UTF-8.
+- La contraseña no se recorta ni se transforma antes de hashearla.
+- No se permite registrar un email existente.
+
+El límite máximo se comprueba en bytes porque algunos caracteres, como los emojis, ocupan más de un byte en UTF-8.
+
+La contraseña se hashea con bcrypt antes de guardarse. La respuesta nunca incluye el campo `password`.
+
+Ejemplo de respuesta `400`:
 
 ```json
 {
   "status": "error",
-  "message": "Faltan campos obligatorios: last_name, email, password"
+  "message": "Faltan campos obligatorios: last_name, password"
 }
 ```
 
-También se devuelve `400` ante un body que no sea un objeto, tipos incorrectos, email inválido o contraseña fuera de los límites establecidos.
+El mensaje depende de la validación que falle.
 
-### Email duplicado
-
-Respuesta `409 Conflict`:
+Response `409` por email duplicado:
 
 ```json
 {
@@ -316,137 +373,387 @@ Respuesta `409 Conflict`:
 }
 ```
 
-La búsqueda de duplicados utiliza el email normalizado.
+El control de duplicados combina una consulta previa y el manejo del error del índice único de MongoDB.
 
-Además de la consulta previa, un índice único en MongoDB impide guardar emails repetidos. El error de clave duplicada se transforma en una respuesta `409`, contemplando solicitudes simultáneas.
+### POST /api/sessions/login
 
-### Fallas inesperadas
+Request:
 
-Respuesta `500 Internal Server Error`:
+```http
+POST http://localhost:3000/api/sessions/login
+Content-Type: application/json
+```
+
+```json
+{
+  "email": "ana@mail.com",
+  "password": "Secreta123"
+}
+```
+
+Response `200`:
+
+```json
+{
+  "status": "success",
+  "message": "Login correcto"
+}
+```
+
+Además, la respuesta establece la cookie `currentUser`.
+
+El login normaliza el email y compara la contraseña recibida con el hash guardado mediante bcrypt.
+
+Los datos de login inválidos y las credenciales incorrectas devuelven `401` con el mismo mensaje:
 
 ```json
 {
   "status": "error",
-  "message": "No se pudo registrar el usuario"
+  "message": "Credenciales inválidas"
 }
 ```
 
-Los detalles internos del error no se incluyen en la respuesta al cliente.
+La respuesta no distingue entre un email inexistente y una contraseña incorrecta.
 
-## Modelo de usuario
+#### JWT
 
-El modelo `User` contiene:
+El token contiene los datos del usuario:
 
-- `first_name`.
-- `last_name`.
-- `email`, con índice único.
-- `password`, que almacena el hash.
-- `role`, con valores permitidos `user`, `organizer` y `admin`.
-
-El campo `password` utiliza `select: false` para excluirse de las consultas habituales.
-
-Como esa opción no elimina el hash del resultado de creación, el service construye explícitamente la respuesta pública seleccionando únicamente los campos permitidos.
-
-El valor predeterminado del rol es `user`. Además, el service lo asigna explícitamente durante el registro público para impedir que el cliente elija un rol privilegiado.
-
-## Protección de contraseñas
-
-El helper `src/utils/hash.js` utiliza bcrypt de forma asincrónica con un factor de costo de 12.
-
-Bcrypt genera automáticamente un salt para cada hash. La contraseña original no se almacena en MongoDB.
-
-Se valida el límite de 72 bytes antes de calcular el hash, ya que bcrypt ignora el contenido que excede ese límite. Se utiliza:
-
-```js
-Buffer.byteLength(password, "utf8")
+```json
+{
+  "id": "507f1f77bcf86cd799439011",
+  "email": "ana@mail.com",
+  "role": "user"
+}
 ```
 
-La comprobación se realiza en bytes porque ciertos caracteres, como los emojis, ocupan más de un byte.
+La biblioteca agrega las marcas temporales `iat` y `exp`.
 
-Esta validación evita aceptar contraseñas cuyo contenido sería truncado silenciosamente por bcrypt.
+El JWT:
 
-## Modelo de evento
+- Se firma con `JWT_SECRET`.
+- Utiliza el algoritmo `HS256`.
+- Tiene la expiración configurada mediante `JWT_EXPIRES_IN`.
+- No contiene la contraseña ni su hash.
+- Se verifica antes de permitir el acceso a `/current`.
 
-El modelo base `Event` incluye:
+#### Cookie de autenticación
 
-- `title`.
-- `description`.
-- `date`.
-- `location`.
-- `capacity`.
+| Propiedad | Valor |
+| --- | --- |
+| Nombre | `currentUser` |
+| `httpOnly` | `true` |
+| `sameSite` | `lax` |
+| `maxAge` | `3600000` milisegundos, equivalente a una hora |
+| `secure` | `true` únicamente cuando `NODE_ENV=production` |
+| `path` | `/` |
 
-La capacidad debe ser un entero positivo dentro del rango seguro de JavaScript.
+En producción, la cookie requiere HTTPS por tener `secure: true`.
 
-El modelo queda preparado para futuras entregas. Actualmente no hay endpoints de creación o administración de eventos.
+La duración de la cookie y la expiración del JWT son configuraciones independientes. Con `JWT_EXPIRES_IN=1h`, ambas duran una hora.
 
-## Colección de Postman
+Si se configura un JWT de menor duración, el servidor lo rechaza al vencer aunque la cookie siga guardada.
 
-El archivo `CODER - 95280.postman_collection.json` proviene del material base compartido por el docente.
+### GET /api/sessions/current
 
-Actualmente incluye una solicitud:
+Request, después de un login correcto:
 
-- `GET /api/health`: comprueba que el servidor HTTP esté activo.
+```http
+GET http://localhost:3000/api/sessions/current
+```
 
-### Cómo utilizarla
+No requiere body. El cliente debe enviar la cookie `currentUser`.
 
-1. Iniciar el servidor con `npm run dev`.
+Response `200`:
+
+```json
+{
+  "status": "success",
+  "payload": {
+    "id": "507f1f77bcf86cd799439011",
+    "email": "ana@mail.com",
+    "role": "user"
+  }
+}
+```
+
+El middleware lee la cookie, verifica la firma y expiración del JWT y asigna los datos permitidos a `req.user`.
+
+Sin cookie o con un token inválido, manipulado o vencido, devuelve `401`:
+
+```json
+{
+  "status": "error",
+  "message": "No autenticado"
+}
+```
+
+Los datos devueltos provienen del token. En esta etapa, `/current` no vuelve a consultar al usuario en la base de datos.
+
+### POST /api/sessions/logout
+
+Request:
+
+```http
+POST http://localhost:3000/api/sessions/logout
+```
+
+No requiere body.
+
+Response `200`:
+
+```json
+{
+  "status": "success",
+  "message": "Sesión cerrada"
+}
+```
+
+La respuesta elimina la cookie utilizando el mismo path y las mismas opciones de seguridad con las que fue creada.
+
+Después del logout, una nueva solicitud a `/current` desde ese cliente debe devolver `401`.
+
+El logout elimina la cookie del cliente. No revoca copias del JWT que pudieran haberse conservado: estas siguen siendo válidas hasta su expiración.
+
+## Códigos HTTP
+
+| Código | Uso |
+| --- | --- |
+| `200` | Consulta, login o logout exitoso. |
+| `201` | Usuario registrado. |
+| `400` | Datos de registro inválidos. |
+| `401` | Credenciales incorrectas o falta de autenticación válida. |
+| `409` | Email ya registrado. |
+| `500` | Error interno inesperado. |
+
+Los errores internos se registran en el servidor y se responden con un mensaje general, sin devolver detalles internos al cliente.
+
+## Pruebas con Postman
+
+El repositorio incluye:
+
+```text
+CODER - 95280.postman_collection.json
+```
+
+La colección original del profesor se amplió con las rutas actuales del proyecto.
+
+### Importación y configuración
+
+1. Iniciar el servidor.
 2. Abrir Postman y seleccionar **Import**.
 3. Seleccionar el archivo de la colección.
-4. Revisar la variable `base_url`, cuyo valor inicial es `http://localhost:3000`.
-5. Si se utiliza otro puerto, actualizar esa variable.
-6. Ejecutar la solicitud “Verificar estado del servidor”.
+4. Revisar sus variables.
 
-La colección base no incluye el registro de usuarios. Sus solicitudes y casos de prueba se documentan en este README y se ejecutaron manualmente en Postman.
-
-Las variables `user_id` y `event_id` pertenecen a la colección original y actualmente no se utilizan.
-
-## Pruebas manuales
-
-Casos comprobados durante el desarrollo:
-
-| Caso | Resultado esperado |
+| Variable | Valor de ejemplo |
 | --- | --- |
-| Registro válido | `201`, con datos públicos del usuario. |
-| Email con mayúsculas y espacios exteriores | Se guarda normalizado. |
-| Body con `role: "admin"` | El usuario se crea con rol `user`. |
-| Email ya registrado | `409`. |
-| Email duplicado con diferente capitalización o espacios | `409`. |
-| Campos obligatorios faltantes | `400`. |
-| Email con formato inválido | `400`. |
-| Contraseña menor a 8 caracteres | `400`. |
-| Contraseña superior a 72 bytes | `400`. |
-| Inspección del documento en Atlas | La contraseña aparece como hash bcrypt. |
-| Inspección de la respuesta del registro | No aparece el campo `password`. |
+| `base_url` | `http://localhost:3000` |
+| `user_email` | `prueba-postman@example.com` |
+| `user_password` | `Secreta123` |
 
-Para comprobar la persistencia, abrir la base `plataforma_eventos` en Atlas, seleccionar la colección `users` y buscar el email utilizado en la prueba.
+Los valores de usuario son datos ficticios para pruebas.
 
-Los registros exitosos permanecen en la base. Para repetir una prueba de creación, utilizar otro email de prueba o eliminar únicamente el documento correspondiente desde Atlas.
+### Flujo principal
 
-Todavía no existe un endpoint para eliminar usuarios ni una suite de pruebas automatizadas.
+1. Registrar un usuario: debe devolver `201`.
+2. Iniciar sesión con ese usuario: debe devolver `200`.
+3. Revisar que exista la cookie `currentUser`.
+4. Consultar `/current`: debe devolver `200` con `id`, `email` y `role`.
+5. Ejecutar logout: debe devolver `200`.
+6. Consultar nuevamente `/current`: debe devolver `401`.
 
-## Repositorio
+Postman debe conservar y enviar la cookie entre las solicitudes. No es necesario copiar el JWT a un header Authorization.
+
+Para repetir un registro exitoso, cambiar `user_email`. Si se utiliza un email ya registrado, la respuesta esperada es `409`.
+
+### Casos adicionales
+
+- Registro con campos faltantes.
+- Email con formato inválido.
+- Contraseña demasiado corta.
+- Contraseña que supera los 72 bytes en UTF-8.
+- Email duplicado con diferencias de mayúsculas o espacios.
+- Intento de asignar un rol distinto de `user` desde el registro: el usuario creado conserva el rol `user`.
+- Login con email inexistente.
+- Login con contraseña incorrecta.
+- Consulta de `/current` sin cookie.
+- Consulta de `/current` con un token inválido o vencido.
+
+También se verificó desde Atlas que la contraseña se almacena como hash y no como texto plano.
+
+### Prueba manual de vencimiento
+
+1. Cambiar temporalmente `JWT_EXPIRES_IN` a `5s` en `.env`.
+2. Reiniciar el servidor.
+3. Hacer un nuevo login.
+4. Esperar más de cinco segundos.
+5. Consultar `/current` y comprobar la respuesta `401`.
+6. Restaurar `JWT_EXPIRES_IN=1h` y reiniciar el servidor.
+
+Para continuar utilizando la API después de esta prueba, realizar otro login. Cambiar la configuración no renueva un token ya emitido.
+
+## Pruebas automatizadas
+
+Las pruebas automatizadas se incorporaron como mejora a partir de la devolución docente de la preentrega 2, aunque no formaban parte de los requisitos originales de esa actividad.
+
+Para implementarlas se utilizaron:
+
+- **node:test:** organiza y ejecuta las pruebas.
+- **Supertest:** envía peticiones HTTP a la aplicación Express y permite comprobar sus respuestas.
+- **node:assert/strict:** verifica que los resultados coincidan con lo esperado.
+
+Las pruebas complementan las comprobaciones manuales realizadas con Postman y permiten volver a verificar el registro y la autenticación después de modificar el código.
+
+Se utiliza una base independiente en MongoDB Atlas, llamada `plataforma_eventos_test`, configurada mediante `MONGO_TEST_URL`. Esto permite comprobar la persistencia real sin modificar los usuarios de la base de la aplicación.
+
+Cada ejecución genera usuarios con emails únicos y, al finalizar, elimina únicamente esos usuarios. No se vacían las colecciones ni se elimina la base de datos.
+
+Archivos:
+
+- `tests/register.test.js`
+- `tests/auth.test.js`
+
+### Configuración de la base de prueba
+
+Definir `MONGO_TEST_URL` en `.env` con una URI que apunte a:
+
+```text
+plataforma_eventos_test
+```
+
+Puede utilizarse el mismo cluster de Atlas que aloja la aplicación, manteniendo las bases separadas:
+
+| Uso | Variable | Base |
+| --- | --- | --- |
+| Aplicación | `MONGO_URL` | `plataforma_eventos` |
+| Pruebas | `MONGO_TEST_URL` | `plataforma_eventos_test` |
+
+Los archivos de prueba comprueban que:
+
+- La URI de prueba incluya exactamente el nombre `plataforma_eventos_test`.
+- `MONGO_URL` no apunte a esa base de prueba.
+- La conexión activa utilice la base esperada.
+
+La configuración del entorno se realiza dentro del proceso de pruebas antes de importar la aplicación. Estos cambios no modifican el archivo `.env` ni la configuración de un servidor que se encuentre ejecutándose en otro proceso.
+
+### Ejecución
+
+```bash
+npm test
+```
+
+No es necesario iniciar el servidor con `npm start` o `npm run dev`: Supertest utiliza directamente la aplicación Express.
+
+Sí se necesita acceso a MongoDB Atlas.
+
+### Cobertura de registro
+
+Ocho pruebas comprueban:
+
+1. Registro exitoso, normalización del email, protección del rol y contraseña hasheada.
+2. Rechazo de emails duplicados con diferencias de mayúsculas y espacios.
+3. Rechazo de campos obligatorios faltantes.
+4. Rechazo de email inválido.
+5. Rechazo de contraseña demasiado corta.
+6. Rechazo de contraseña de 73 bytes.
+7. Rechazo de contraseña con emojis que supera los 72 bytes.
+8. Rechazo de contraseña con tipo incorrecto.
+
+Las pruebas de datos inválidos también comprueban que no se creen usuarios.
+
+La prueba de registro exitoso verifica que:
+
+- La respuesta no incluya la contraseña.
+- El rol sea `user`.
+- El valor almacenado no sea la contraseña en texto plano.
+- El hash tenga 12 rondas de bcrypt.
+- La contraseña original coincida con el hash mediante `bcrypt.compare()`.
+
+### Cobertura de autenticación
+
+Ocho pruebas comprueban:
+
+1. Flujo login → current → logout → current rechazado, junto con los atributos de la cookie y el contenido del JWT.
+2. Login con email inexistente.
+3. Login con contraseña incorrecta.
+4. Login sin contraseña.
+5. `/current` sin cookie.
+6. `/current` con un valor que no es un JWT.
+7. `/current` con un JWT cuyo rol fue alterado sin volver a firmarlo.
+8. `/current` con un JWT correctamente firmado pero vencido.
+
+Se utiliza `request.agent(app)` para conservar las cookies durante la prueba del flujo completo.
+
+El archivo de autenticación genera una clave JWT aleatoria para su proceso y configura una expiración de una hora. No modifica el archivo `.env`.
+
+La prueba de manipulación cambia el rol del payload, pero conserva la firma original. El servidor debe detectar esa alteración y rechazar el token.
+
+La prueba de vencimiento genera un token ya expirado, por lo que no requiere esperar ni cambiar la configuración del servidor.
+
+Resultado comprobado:
+
+```text
+tests 16
+pass 16
+fail 0
+```
+
+Las pruebas automatizadas se ejecutan con `NODE_ENV=test`; no comprueban un despliegue HTTPS de producción.
+
+### Documentación de referencia
+
+- [Supertest](https://github.com/forwardemail/supertest)
+- [Test runner de Node.js](https://nodejs.org/api/test.html)
+- [Assertions de Node.js](https://nodejs.org/api/assert.html)
+- [jsonwebtoken](https://github.com/auth0/node-jsonwebtoken)
+- [bcrypt](https://github.com/kelektiv/node.bcrypt.js)
+
+## Scripts disponibles
+
+| Comando | Descripción |
+| --- | --- |
+| `npm start` | Inicia el servidor. |
+| `npm run dev` | Inicia el servidor con seguimiento de cambios. |
+| `npm test` | Ejecuta las pruebas de registro y autenticación. |
+
+## Alcance actual
+
+Esta entrega implementa la base de autenticación.
+
+Todavía no incluye:
+
+- Autorización de endpoints según el rol.
+- Passport.
+- Recuperación de contraseñas.
+- Refresh tokens o revocación de JWT.
+- CRUD completo de eventos.
+- Inscripciones y control de cupos.
+
+Los roles están definidos en el modelo y presentes en el JWT, pero la autorización por rol se incorporará en próximas etapas.
+
+## Organización del repositorio
 
 El repositorio incluye:
 
 - Código fuente.
-- `package.json`.
-- `package-lock.json`.
+- Pruebas automatizadas.
+- Colección de Postman.
+- `package.json` y `package-lock.json`.
 - `.env.example`.
 - `.gitignore`.
-- Colección base de Postman.
-- README con instalación, configuración y pruebas.
+- Documentación de instalación y uso.
 
-El archivo `.gitignore` excluye `.env`, `node_modules` y otros archivos locales de trabajo.
+El archivo `.gitignore` excluye `.env`, `node_modules` y otros archivos locales o generados.
 
-Las carpetas todavía vacías se conservan mediante archivos `.gitkeep`.
+No deben incorporarse credenciales reales ni datos personales de usuarios a los ejemplos, capturas o archivos versionados.
 
-## Base del proyecto
+## Base de clase
 
-El proyecto parte del material compartido por el docente:
+El proyecto comenzó a partir del repositorio proporcionado por el profesor:
 
 https://github.com/pablobianchi/coder-95280
 
-Sobre esa base se desarrolla la temática de talleres municipales y las funcionalidades de las entregas de Backend II.
+Sobre esa base se adaptó la temática a talleres municipales y se incorporaron los modelos, la arquitectura del flujo de usuarios, la conexión a MongoDB Atlas, el registro, la autenticación y las pruebas.
 
 ## Autor
 

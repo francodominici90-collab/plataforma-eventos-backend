@@ -1,10 +1,8 @@
 {
   "info": {
-    "_postman_id": "34f7d769-e180-4f0f-a415-ea3ba413adb1",
-    "name": "CODER - 95280",
-    "description": "Colección de endpoints del proyecto base de la comisión 95280 (Backend II). Requiere el servidor corriendo en localhost con el PORT definido en .env.",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "_exporter_id": "11343483"
+    "name": "Plataforma de talleres municipales - Backend II",
+    "description": "Colección basada en el proyecto de la comisión 95280 y ampliada para probar registro, login con JWT, consulta del usuario autenticado y logout. Utiliza datos ficticios. Ejecutar registro, login, current, logout y nuevamente current para comprobar el flujo completo.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
@@ -15,17 +13,106 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/health",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "health"
-              ]
+            "url": "{{base_url}}/api/health",
+            "description": "Devuelve 200 con status ok y el mensaje Servidor activo."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Events",
+      "item": [
+        {
+          "name": "Consultar eventos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/events",
+            "description": "Endpoint inicial del recurso events. Devuelve 200 con status success y payload vacío. La gestión de eventos se implementará en próximas etapas."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Sessions",
+      "item": [
+        {
+          "name": "Consultar estado del recurso",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/sessions",
+            "description": "Confirma que el recurso sessions está disponible. No verifica si existe una sesión autenticada; para eso se utiliza /current."
+          },
+          "response": []
+        },
+        {
+          "name": "1 - Registrar usuario",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"Ana\",\n  \"last_name\": \"Pérez\",\n  \"email\": \"{{user_email}}\",\n  \"password\": \"{{user_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "description": "Devuelve un estado simple para confirmar que el servidor está activo."
+            "url": "{{base_url}}/api/sessions/register",
+            "description": "Crea un usuario con rol user. Normaliza el email y guarda la contraseña hasheada. Devuelve 201 sin password, 400 ante datos inválidos y 409 si el email ya existe. Para repetir un registro exitoso, cambiar user_email."
+          },
+          "response": []
+        },
+        {
+          "name": "2 - Iniciar sesión",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{user_email}}\",\n  \"password\": \"{{user_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/api/sessions/login",
+            "description": "Devuelve 200 y establece la cookie currentUser con el JWT. La cookie es HttpOnly, SameSite=Lax y dura una hora; Secure se activa únicamente en producción. Las credenciales incorrectas devuelven 401 con el mensaje genérico Credenciales inválidas."
+          },
+          "response": []
+        },
+        {
+          "name": "3 - Consultar usuario autenticado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/sessions/current",
+            "description": "Ejecutar después del login, utilizando la cookie currentUser guardada por Postman. No requiere body ni Bearer token. Devuelve 200 con id, email y role. Sin cookie o con un token inválido o vencido, devuelve 401 con el mensaje No autenticado."
+          },
+          "response": []
+        },
+        {
+          "name": "4 - Cerrar sesión",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{base_url}}/api/sessions/logout",
+            "description": "Devuelve 200 con el mensaje Sesión cerrada y elimina la cookie currentUser. Después, repetir GET /api/sessions/current: debe responder 401. El logout elimina la cookie del cliente; no revoca copias del JWT que pudieran conservarse."
           },
           "response": []
         }
@@ -35,15 +122,18 @@
   "variable": [
     {
       "key": "base_url",
-      "value": "http://localhost:3000"
+      "value": "http://localhost:3000",
+      "type": "string"
     },
     {
-      "key": "user_id",
-      "value": ""
+      "key": "user_email",
+      "value": "prueba-postman@example.com",
+      "type": "string"
     },
     {
-      "key": "event_id",
-      "value": ""
+      "key": "user_password",
+      "value": "Secreta123",
+      "type": "string"
     }
   ]
 }
