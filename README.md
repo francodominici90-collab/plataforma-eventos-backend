@@ -594,7 +594,7 @@ Para continuar utilizando la API después de esta prueba, realizar otro login. C
 
 ## Pruebas automatizadas
 
-Las pruebas automatizadas se incorporaron como mejora a partir de la devolución docente de la preentrega 2, aunque no formaban parte de los requisitos originales de esa actividad.
+Las pruebas automatizadas se incorporaron como mejora a partir de la devolución docente de la preentrega 2
 
 Para implementarlas se utilizaron:
 
